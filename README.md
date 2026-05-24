@@ -83,7 +83,7 @@ A comprehensive personal finance management system built with Spring Boot 3.x th
 ### 1. Clone the Repository
 
 \`\`\`bash
-git clone https://github.com/YOUR_USERNAME/personal-finance-manager.git
+git clone https://github.com/phalgen/personal-finance-manager.git
 cd personal-finance-manager
 \`\`\`
 
