@@ -16,8 +16,8 @@ RUN ./mvnw dependency:go-offline -B
 # Copy source code
 COPY src src
 
-# Build the application
-RUN ./mvnw clean package -DskipTests
+# Build the application (SKIP TEST COMPILATION)
+RUN ./mvnw clean package -Dmaven.test.skip=true
 
 # Expose port
 EXPOSE 8080
