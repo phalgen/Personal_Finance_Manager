@@ -18,10 +18,16 @@ public class ReportController {
     }
 
     @GetMapping("/monthly/{year}/{month}")
-    public ResponseEntity<MonthlyReportResponse> getMonthlyReport(
+    public ResponseEntity<?> getMonthlyReport(
             @PathVariable int year,
             @PathVariable int month,
             HttpSession session) {
+        // Validate month range
+        if (month < 1 || month > 12) {
+            return ResponseEntity.badRequest()
+                    .body(java.util.Map.of("error", "Month must be between 1 and 12"));
+        }
+
         Long userId = (Long) session.getAttribute("userId");
         MonthlyReportResponse report = reportService.getMonthlyReport(userId, year, month);
         return ResponseEntity.ok(report);
