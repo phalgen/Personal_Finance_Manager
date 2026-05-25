@@ -54,14 +54,18 @@ public class SavingsGoal {
         }
     }
 
-    public BigDecimal calculateProgressPercentage(BigDecimal currentProgress) {
+    // CHANGED: Return Double instead of BigDecimal to avoid trailing zeros
+    public Double calculateProgressPercentage(BigDecimal currentProgress) {
         if (targetAmount.compareTo(BigDecimal.ZERO) == 0) {
-            return BigDecimal.ZERO;
+            return 0.0;
         }
-        return currentProgress
+        BigDecimal percentage = currentProgress
                 .divide(targetAmount, 4, RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100))
                 .setScale(2, RoundingMode.HALF_UP);
+
+        // Convert to double - this automatically strips trailing zeros (65.50 → 65.5)
+        return percentage.doubleValue();
     }
 
     public BigDecimal calculateRemainingAmount(BigDecimal currentProgress) {
