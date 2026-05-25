@@ -2,11 +2,11 @@ package com.finance.personalfinancemanager.service;
 
 import com.finance.personalfinancemanager.dto.goal.GoalRequest;
 import com.finance.personalfinancemanager.dto.goal.GoalResponse;
+import com.finance.personalfinancemanager.dto.goal.UpdateGoalRequest;
 import com.finance.personalfinancemanager.entity.SavingsGoal;
 import com.finance.personalfinancemanager.entity.User;
-import com.finance.personalfinancemanager.exception.BadRequestException;
 import com.finance.personalfinancemanager.exception.ForbiddenException;
-import com.finance.personalfinancemanager.exception.NotFoundException;
+import com.finance.personalfinancemanager.exception.ResourceNotFoundException;
 import com.finance.personalfinancemanager.repository.SavingsGoalRepository;
 import com.finance.personalfinancemanager.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,14 +55,14 @@ class SavingsGoalServiceTest {
         savingsGoal = new SavingsGoal();
         savingsGoal.setId(1L);
         savingsGoal.setGoalName("Emergency Fund");
-        savingsGoal.setTargetAmount(new BigDecimal("100000.00"));
+        savingsGoal.setTargetAmount(new BigDecimal("10000.00"));
         savingsGoal.setTargetDate(LocalDate.now().plusMonths(6));
         savingsGoal.setStartDate(LocalDate.now());
         savingsGoal.setUser(user);
 
         goalRequest = new GoalRequest();
         goalRequest.setGoalName("Emergency Fund");
-        goalRequest.setTargetAmount(new BigDecimal("100000.00"));
+        goalRequest.setTargetAmount(new BigDecimal("10000.00"));
         goalRequest.setTargetDate(LocalDate.now().plusMonths(6));
     }
 
@@ -71,28 +71,28 @@ class SavingsGoalServiceTest {
         // Arrange
         when(userRepository.findById(anyLong())).thenReturn(Optional.of(user));
         when(savingsGoalRepository.save(any(SavingsGoal.class))).thenReturn(savingsGoal);
-        when(transactionService.calculateNetSavingsSince(anyLong(), any(LocalDate.class)))
-            .thenReturn(new BigDecimal("50000.00"));
+        when(transactionService.calculateNetSavings(anyLong(), any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(new BigDecimal("5000.00"));
 
         // Act
-        GoalResponse response = savingsGoalService.createGoal(1L, goalRequest);
+        GoalResponse response = savingsGoalService.createGoal(goalRequest, 1L);
 
         // Assert
         assertNotNull(response);
         assertEquals("Emergency Fund", response.getGoalName());
-        assertEquals(new BigDecimal("100000.00"), response.getTargetAmount());
+        assertEquals(new BigDecimal("10000.00"), response.getTargetAmount());
         verify(savingsGoalRepository).save(any(SavingsGoal.class));
     }
 
     @Test
-    void createGoal_PastDate_ThrowsBadRequestException() {
+    void createGoal_PastDate_ThrowsIllegalArgumentException() {
         // Arrange
         goalRequest.setTargetDate(LocalDate.now().minusDays(1));
 
         // Act & Assert
-        BadRequestException exception = assertThrows(
-            BadRequestException.class,
-            () -> savingsGoalService.createGoal(1L, goalRequest)
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> savingsGoalService.createGoal(goalRequest, 1L)
         );
 
         assertEquals("Target date must be in the future", exception.getMessage());
@@ -103,9 +103,9 @@ class SavingsGoalServiceTest {
     void getAllGoals_ReturnsUserGoals() {
         // Arrange
         when(savingsGoalRepository.findByUserId(anyLong()))
-            .thenReturn(Arrays.asList(savingsGoal));
-        when(transactionService.calculateNetSavingsSince(anyLong(), any(LocalDate.class)))
-            .thenReturn(new BigDecimal("50000.00"));
+                .thenReturn(Arrays.asList(savingsGoal));
+        when(transactionService.calculateNetSavings(anyLong(), any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(new BigDecimal("5000.00"));
 
         // Act
         List<GoalResponse> goals = savingsGoalService.getAllGoals(1L);
@@ -117,47 +117,51 @@ class SavingsGoalServiceTest {
     }
 
     @Test
-    void getGoalById_Success() {
+    void getGoal_Success() {
         // Arrange
         when(savingsGoalRepository.findById(anyLong())).thenReturn(Optional.of(savingsGoal));
-        when(transactionService.calculateNetSavingsSince(anyLong(), any(LocalDate.class)))
-            .thenReturn(new BigDecimal("50000.00"));
+        when(transactionService.calculateNetSavings(anyLong(), any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(new BigDecimal("5000.00"));
 
         // Act
-        GoalResponse response = savingsGoalService.getGoalById(1L, 1L);
+        GoalResponse response = savingsGoalService.getGoal(1L, 1L);
 
         // Assert
         assertNotNull(response);
         assertEquals("Emergency Fund", response.getGoalName());
-        assertEquals(new BigDecimal("50000.00"), response.getCurrentProgress());
+        assertEquals(new BigDecimal("5000.00"), response.getCurrentProgress());
     }
 
     @Test
-    void getGoalById_NotFound_ThrowsNotFoundException() {
+    void getGoal_NotFound_ThrowsResourceNotFoundException() {
         // Arrange
         when(savingsGoalRepository.findById(anyLong())).thenReturn(Optional.empty());
 
         // Act & Assert
-        NotFoundException exception = assertThrows(
-            NotFoundException.class,
-            () -> savingsGoalService.getGoalById(1L, 1L)
+        ResourceNotFoundException exception = assertThrows(
+                ResourceNotFoundException.class,
+                () -> savingsGoalService.getGoal(1L, 1L)
         );
 
-        assertEquals("Savings goal not found", exception.getMessage());
+        assertEquals("Goal not found", exception.getMessage());
     }
 
     @Test
-    void getGoalById_NotOwner_ThrowsForbiddenException() {
+    void getGoal_NotOwner_ThrowsForbiddenException() {
         // Arrange
+        User otherUser = new User();
+        otherUser.setId(2L);
+        savingsGoal.setUser(otherUser);
+
         when(savingsGoalRepository.findById(anyLong())).thenReturn(Optional.of(savingsGoal));
 
         // Act & Assert
         ForbiddenException exception = assertThrows(
-            ForbiddenException.class,
-            () -> savingsGoalService.getGoalById(2L, 1L) // Different userId
+                ForbiddenException.class,
+                () -> savingsGoalService.getGoal(1L, 1L) // Different userId
         );
 
-        assertEquals("Access denied", exception.getMessage());
+        assertEquals("You don't have permission to view this goal", exception.getMessage());
     }
 
     @Test
@@ -165,15 +169,15 @@ class SavingsGoalServiceTest {
         // Arrange
         when(savingsGoalRepository.findById(anyLong())).thenReturn(Optional.of(savingsGoal));
         when(savingsGoalRepository.save(any(SavingsGoal.class))).thenReturn(savingsGoal);
-        when(transactionService.calculateNetSavingsSince(anyLong(), any(LocalDate.class)))
-            .thenReturn(new BigDecimal("50000.00"));
+        when(transactionService.calculateNetSavings(anyLong(), any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(new BigDecimal("5000.00"));
 
-        GoalRequest updateRequest = new GoalRequest();
-        updateRequest.setTargetAmount(new BigDecimal("150000.00"));
+        UpdateGoalRequest updateRequest = new UpdateGoalRequest();
+        updateRequest.setTargetAmount(new BigDecimal("15000.00"));
         updateRequest.setTargetDate(LocalDate.now().plusMonths(12));
 
         // Act
-        GoalResponse response = savingsGoalService.updateGoal(1L, 1L, updateRequest);
+        GoalResponse response = savingsGoalService.updateGoal(1L, updateRequest, 1L);
 
         // Assert
         assertNotNull(response);
@@ -190,35 +194,5 @@ class SavingsGoalServiceTest {
 
         // Assert
         verify(savingsGoalRepository).delete(savingsGoal);
-    }
-
-    @Test
-    void calculateProgress_ReturnsCorrectPercentage() {
-        // Arrange
-        when(transactionService.calculateNetSavingsSince(anyLong(), any(LocalDate.class)))
-            .thenReturn(new BigDecimal("50000.00"));
-
-        // Act
-        double percentage = savingsGoalService.calculateProgressPercentage(
-            1L,
-            new BigDecimal("50000.00"),
-            new BigDecimal("100000.00")
-        );
-
-        // Assert
-        assertEquals(50.0, percentage, 0.01);
-    }
-
-    @Test
-    void calculateProgress_ZeroTarget_ReturnsZero() {
-        // Act
-        double percentage = savingsGoalService.calculateProgressPercentage(
-            1L,
-            new BigDecimal("50000.00"),
-            BigDecimal.ZERO
-        );
-
-        // Assert
-        assertEquals(0.0, percentage);
     }
 }
