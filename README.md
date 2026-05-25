@@ -278,13 +278,9 @@ mvnw test
 ## 👨‍💻 Author
 
 **Your Name**
-- GitHub: [@YOUR_USERNAME](https://github.com/YOUR_USERNAME)
+- GitHub: [@phalgen](https://github.com/phalgen)
 
 ---
-
-## 📄 License
-
-MIT License
 
 ---
 
