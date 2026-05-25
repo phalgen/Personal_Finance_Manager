@@ -7,6 +7,8 @@ import jakarta.servlet.http.HttpSession;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/reports")
 public class ReportController {
@@ -22,10 +24,11 @@ public class ReportController {
             @PathVariable int year,
             @PathVariable int month,
             HttpSession session) {
-        // Validate month range
+
+        // ====== VALIDATE MONTH (1-12) ======
         if (month < 1 || month > 12) {
             return ResponseEntity.badRequest()
-                    .body(java.util.Map.of("error", "Month must be between 1 and 12"));
+                    .body(Map.of("error", "Month must be between 1 and 12"));
         }
 
         Long userId = (Long) session.getAttribute("userId");
